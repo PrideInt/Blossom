@@ -34,7 +34,7 @@ public class Blossom extends PlantAbility implements AddonAbility {
 	private TempBlock tempBlock;
 	Random rand = new Random();
 	
-	private Material[] nongrass = new Material[] { Material.MYCELIUM, Material.SOUL_SAND, Material.PODZOL };
+	private Material[] nongrass = new Material[] { Material.MYCELIUM, Material.SOUL_SAND, Material.PODZOL, Material.GRAVEL };
 
 	public Blossom(Player player) {
 		super(player);
