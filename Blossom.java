@@ -34,7 +34,7 @@ public class Blossom extends PlantAbility implements AddonAbility {
 	private TempBlock tempBlock;
 	Random rand = new Random();
 	
-	private Material[] nongrass = new Material[] { Material.MYCELIUM, Material.SOUL_SAND };
+	private Material[] nongrass = new Material[] { Material.MYCELIUM, Material.SOUL_SAND, Material.PODZOL };
 
 	public Blossom(Player player) {
 		super(player);
@@ -201,7 +201,7 @@ public class Blossom extends PlantAbility implements AddonAbility {
 	@Override
 	public String getAuthor() {
 		return Element.WATER.getColor() + "" + ChatColor.UNDERLINE + 
-				"Prride";
+				"Prride, LiamRP and Shookified";
 	}
 
 	@Override
