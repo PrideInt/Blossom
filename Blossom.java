@@ -1,6 +1,6 @@
 package me.Pride.korra.Blossom;
 
-import java.util.Random;
+import java.util.*;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -26,15 +26,15 @@ public class Blossom extends PlantAbility implements AddonAbility {
 	FileConfiguration config = ConfigManager.getConfig();
 	
 	private long cooldown;
-	private double radius;
+	private long duration;
+	private int radius;
 	private long revertTime;
 	private boolean reversible;
 	private int growthSpeed;
-	
-	private TempBlock tempBlock;
+	private boolean donework = false;
+
 	Random rand = new Random();
-	
-	private Material[] nongrass = new Material[] { Material.MYCELIUM, Material.SOUL_SAND, Material.PODZOL, Material.GRAVEL };
+	private final static List<Material> grassplants = Arrays.asList(Material.GRASS, Material.GRASS, Material.GRASS,  Material.POPPY, Material.DANDELION);
 
 	public Blossom(Player player) {
 		super(player);
@@ -44,11 +44,12 @@ public class Blossom extends PlantAbility implements AddonAbility {
 		}
 		
 		cooldown = config.getLong(path + "Cooldown");
-		radius = config.getDouble(path + "Radius");
+		duration = config.getLong(path + "Duration");
+		radius = config.getInt(path + "Radius");
 		revertTime = config.getLong(path + "RevertTime");
 		reversible = config.getBoolean(path + "PlantsRevert");
 		growthSpeed = config.getInt(path + "GrowthSpeed");
-		
+
 		start();
 	}
 
@@ -89,101 +90,72 @@ public class Blossom extends PlantAbility implements AddonAbility {
 			remove();
 			return;
 		}
-		
-		if (player.isSneaking()) {
-			blossom();
-		} else {
-			bPlayer.addCooldown(this);
+
+		if(this.getStartTime() + duration < System.currentTimeMillis()){
+			if (donework) {
+				bPlayer.addCooldown(this);
+			}
 			remove();
 			return;
 		}
+		
+		if (!player.isSneaking()) {
+			if (donework) {
+				bPlayer.addCooldown(this);
+			}
+			remove();
+			return;
+		}
+
+		blossom();
 	}
 	
 	private void blossom() {
-		for (int i = 1; i < growthSpeed; i++) {
-			Location loc = player.getLocation().clone();
-			loc.add((rand.nextBoolean() ? 1 : -1) * rand.nextInt((int) radius),
-					(rand.nextBoolean() ? 1 : -1) * rand.nextInt((int) radius),
-					(rand.nextBoolean() ? 1 : -1) * rand.nextInt((int) radius));
-			
-			Block block = loc.getBlock().getRelative(BlockFace.UP);
-			Block bloc = loc.add(0, 1, 0).getBlock().getRelative(BlockFace.UP);
-			
-			if (GeneralMethods.isRegionProtectedFromBuild(player, "Blossom", block.getLocation())) {
-				return;
+		for (int i = 0; i < growthSpeed; i++) {
+			Location loc = player.getLocation();
+			loc.add((rand.nextBoolean() ? 1 : -1) * rand.nextInt(radius), 0, (rand.nextBoolean() ? 1 : -1) * rand.nextInt(radius));
+			Block baseblock = GeneralMethods.getTopBlock(loc, 3);
+			Block plantblock = baseblock.getRelative(BlockFace.UP);
+
+			if (GeneralMethods.isRegionProtectedFromBuild(player, "Blossom", plantblock.getLocation())) {
+				continue;
 			}
 			
-			if (block.getType() != Material.AIR) {
-				
-				if (block.getType() == Material.GRASS_BLOCK) {
-					if (reversible) {
-						if (rand.nextInt(2) == 0) {
-							
-							tempBlock = new TempBlock(bloc, Material.GRASS);
-							
-						} else if (rand.nextInt(2) == 1) {
-							
-							tempBlock = new TempBlock(bloc, Material.DANDELION);
-							
-						} else if (rand.nextInt(2) == 0) {
-							
-							tempBlock = new TempBlock(bloc, Material.POPPY);
-						}
-					
-						tempBlock.setRevertTime(revertTime);
-						ParticleEffect.VILLAGER_HAPPY.display(bloc.getLocation(), 3, 0.2F, 0.2F, 0.2F, 0.2F);
-						
-					} else {
-						if (rand.nextInt(2) == 0) {
-							
-							new TempBlock(bloc, Material.GRASS);
-							
-						} else if (rand.nextInt(2) == 1) {
-							
-							new TempBlock(bloc, Material.DANDELION);
-							
-						} else if (rand.nextInt(2) == 0) {
-							
-							new TempBlock(bloc, Material.POPPY);
-						}
-						
-						ParticleEffect.VILLAGER_HAPPY.display(bloc.getLocation(), 3, 0.2F, 0.2F, 0.2F, 0.2F);
-					}
-				}
-				
-				for (Material nongrass : this.nongrass) {
-					if (block.getType() == nongrass) {
-						if (reversible) {
-							if (rand.nextInt(2) == 0) {
-								
-								tempBlock = new TempBlock(bloc, Material.RED_MUSHROOM);
-								
-							} else if (rand.nextInt(2) == 1) {
-								
-								tempBlock = new TempBlock(bloc, Material.BROWN_MUSHROOM);
-								
-							}
-							
-							tempBlock.setRevertTime(revertTime);
-							ParticleEffect.SPELL_INSTANT.display(block.getLocation(), 3, 0.2F, 0.2F, 0.2F, 0.2F);
-							
-						} else {
-							if (rand.nextInt(2) == 0) {
-								
-								new TempBlock(bloc, Material.RED_MUSHROOM);
-								
-							} else if (rand.nextInt(2) == 1) {
-								
-								new TempBlock(bloc, Material.BROWN_MUSHROOM);
-								
-							}
-							
-							ParticleEffect.SPELL_INSTANT.display(block.getLocation(), 3, 0.2F, 0.2F, 0.2F, 0.2F);
-						}
-					}
-				}
+			if (isAir(baseblock.getType()) || !isAir(plantblock.getType())){
+				continue;
 			}
+
+			Material plant;
+			if (baseblock.getType() == Material.GRASS_BLOCK) {
+				plant = grassplants.get(rand.nextInt(grassplants.size()));
+			} else if (isMushroomBase(baseblock.getType())) {
+				plant = rand.nextBoolean() ? Material.BROWN_MUSHROOM : Material.RED_MUSHROOM;
+			} else {
+				continue;
+			}
+
+			if (reversible) {
+				TempBlock tempBlock = new TempBlock(plantblock, plant);
+				tempBlock.setRevertTime(revertTime);
+			} else {
+				plantblock.setType(plant, false);
+			}
+
+			donework = true;
+
+			ParticleEffect.VILLAGER_HAPPY.display(plantblock.getLocation(), 3, 0.2F, 0.2F, 0.2F, 0.2F);
 		}
+	}
+
+	private boolean isMushroomBase(Material type){
+		switch(type){
+			case MYCELIUM:
+			case SOUL_SAND:
+			case PODZOL:
+			case GRAVEL:
+				return true;
+		}
+		return false;
 	}
 
 	@Override
@@ -201,7 +173,7 @@ public class Blossom extends PlantAbility implements AddonAbility {
 	@Override
 	public String getAuthor() {
 		return Element.WATER.getColor() + "" + ChatColor.UNDERLINE + 
-				"Prride, LiamRP and Shookified";
+				"Prride, LiamRP, Shookified and PhanaticD";
 	}
 
 	@Override
@@ -216,10 +188,11 @@ public class Blossom extends PlantAbility implements AddonAbility {
 		ProjectKorra.log.info(getName() + " by " + getAuthor() + " " + getVersion() + " loaded!");
 		
 		ConfigManager.getConfig().addDefault(path + "Cooldown", 6500);
+		ConfigManager.getConfig().addDefault(path + "Duration", 2000);
 		ConfigManager.getConfig().addDefault(path + "Radius", 5);
 		ConfigManager.getConfig().addDefault(path + "PlantsRevert", false);
 		ConfigManager.getConfig().addDefault(path + "RevertTime", 20000);
-		ConfigManager.getConfig().addDefault(path + "GrowthSpeed", 5);
+		ConfigManager.getConfig().addDefault(path + "GrowthSpeed", 1);
 		ConfigManager.defaultConfig.save();
 	}
 
