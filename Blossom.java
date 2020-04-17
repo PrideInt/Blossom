@@ -6,6 +6,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.Ageable;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 
@@ -140,6 +141,19 @@ public class Blossom extends PlantAbility implements AddonAbility {
 			} else {
 				plantblock.setType(plant, false);
 			}
+			
+			for (Block block : GeneralMethods.getBlocksAroundPoint(player.getLocation(), radius)) {
+				
+				if (block.getBlockData() instanceof Ageable) {
+					
+					Ageable crop = (Ageable) block.getBlockData();
+					
+					crop.setAge(crop.getMaximumAge());
+					
+					block.setBlockData(crop);
+					
+				}
+			}
 
 			donework = true;
 
@@ -162,7 +176,7 @@ public class Blossom extends PlantAbility implements AddonAbility {
 	public String getDescription() {
 		return Element.WATER.getColor() + "Waterbenders are able to redirect energy paths within plants in order to initiate plant growth "
 				+ "and cause deep roots of trees to grow flowers from underground! When used on mycelium and soul sand, these plants will "
-				+ "blossom into mushrooms.";
+				+ "blossom into mushrooms. When used near seed sources, they will grow immediately.";
 	}
 	
 	@Override
@@ -179,7 +193,7 @@ public class Blossom extends PlantAbility implements AddonAbility {
 	@Override
 	public String getVersion() {
 		return Element.WATER.getColor() + "" + ChatColor.UNDERLINE + 
-				"VERSION 1";
+				"VERSION 2";
 	}
 
 	@Override
